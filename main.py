@@ -49,7 +49,7 @@ def greet():
     return {'Welcome to Mental Health — a space to understand, reflect, and take care of your well-being.'}
 
 
-@app.post('//predict', response_model=PredictionResponse) #6.77777
+@app.post('/predict', response_model=PredictionResponse) #6.77777
 def predict(data: StudentData):
    
    countryGroup = data.country if data.country in top_countries else "Other"

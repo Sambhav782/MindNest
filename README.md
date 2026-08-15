@@ -1,4 +1,4 @@
-MindNest AI
+#MindNest AI
 
 MindNest AI is a student wellness prediction system that uses everyday lifestyle, academic, and digital-habit information to generate a model-based mental-health signal.
 

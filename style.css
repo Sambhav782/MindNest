@@ -875,6 +875,7 @@ a {
     ),
     linear-gradient(155deg, #292343, #503db0);
   box-shadow: var(--shadow-purple);
+  margin-top: 30px;
 }
 .note-illustration {
   width: 43px;

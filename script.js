@@ -1,6 +1,7 @@
 (() => {
   "use strict";
 
+  // IMPORTANT: Keep this deployed backend URL unchanged.
   const API_BASE = "https://mindnest-1z7w.onrender.com";
 
   const form = document.getElementById("predict-form");
@@ -20,57 +21,67 @@
   const errorLabelEl = document.getElementById("error-label");
   const errorCopyEl = document.getElementById("error-copy");
 
-  const GAUGE_ARC_LENGTH = 314; // approx pi * r(100)
+  const homePage = document.getElementById("home-page");
+  const assessmentPage = document.getElementById("assessment-page");
+  const resultPage = document.getElementById("result-page");
+  const progressFill = document.getElementById("progress-fill");
+  const progressNumber = document.getElementById("progress-number");
 
-  // ---------------------------------------------------------
-  // Draw tick marks on both gauges (0..10, every 2 units)
-  // ---------------------------------------------------------
-  function drawTicks() {
-    document.querySelectorAll(".gauge-ticks").forEach((g) => {
-      g.innerHTML = "";
-      const cx = 120,
-        cy = 140,
-        rOuter = 100,
-        rInner = 90;
-      for (let i = 0; i <= 10; i += 2) {
-        const angle = Math.PI - (i / 10) * Math.PI; // 180deg -> 0deg
-        const x1 = cx + rOuter * Math.cos(angle);
-        const y1 = cy - rOuter * Math.sin(angle);
-        const x2 = cx + rInner * Math.cos(angle);
-        const y2 = cy - rInner * Math.sin(angle);
-        const line = document.createElementNS(
-          "http://www.w3.org/2000/svg",
-          "line",
-        );
-        line.setAttribute("x1", x1.toFixed(1));
-        line.setAttribute("y1", y1.toFixed(1));
-        line.setAttribute("x2", x2.toFixed(1));
-        line.setAttribute("y2", y2.toFixed(1));
-        g.appendChild(line);
-      }
+  const GAUGE_ARC_LENGTH = 384;
+  const sections = [...document.querySelectorAll(".form-section")];
+
+  function goToPage(page) {
+    [homePage, assessmentPage, resultPage].forEach((p) => p.classList.remove("active"));
+    page.classList.add("active");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+
+    document.querySelectorAll(".nav-link[data-page]").forEach((link) => {
+      link.classList.toggle("active", link.dataset.page === (page === homePage ? "home" : "assessment"));
     });
   }
-  drawTicks();
 
-  // ---------------------------------------------------------
-  // Segmented control (stress_level) wiring
-  // ---------------------------------------------------------
+  function startAssessment() {
+    goToPage(assessmentPage);
+    updateProgress();
+  }
+
+  document.getElementById("hero-start").addEventListener("click", startAssessment);
+
+  document.getElementById("back-home").addEventListener("click", () => goToPage(homePage));
+  document.getElementById("result-home").addEventListener("click", () => goToPage(homePage));
+  document.getElementById("result-home-2").addEventListener("click", () => goToPage(homePage));
+
+  function updateProgress() {
+    const filled = sections.filter(section => {
+      const controls = [...section.querySelectorAll("input:not([type='hidden']), select")];
+      const hasStress = section.querySelector("#stress_level");
+      return controls.some(c => String(c.value || "").trim() !== "") ||
+             (hasStress && String(hasStress.value || "").trim() !== "");
+    }).length;
+
+    const current = Math.min(3, Math.max(1, filled + 1));
+    progressNumber.textContent = String(current);
+    progressFill.style.width = `${Math.min(100, Math.max(8, (filled / 3) * 100))}%`;
+  }
+
+  document.querySelectorAll("input, select").forEach(el => {
+    el.addEventListener("input", updateProgress);
+    el.addEventListener("change", updateProgress);
+  });
+
   const segGroup = document.getElementById("stress_level_group");
   const stressHiddenInput = document.getElementById("stress_level");
-  segGroup.querySelectorAll(".seg-btn").forEach((btn) => {
+
+  segGroup.querySelectorAll(".stress-option").forEach((btn) => {
     btn.addEventListener("click", () => {
-      segGroup
-        .querySelectorAll(".seg-btn")
-        .forEach((b) => b.classList.remove("active"));
+      segGroup.querySelectorAll(".stress-option").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
       stressHiddenInput.value = btn.dataset.value;
       clearFieldError(stressHiddenInput);
+      updateProgress();
     });
   });
 
-  // ---------------------------------------------------------
-  // Field-level error helpers
-  // ---------------------------------------------------------
   function fieldWrapper(input) {
     return input.closest(".field");
   }
@@ -92,15 +103,10 @@
   }
 
   function clearAllErrors() {
-    form
-      .querySelectorAll(".field")
-      .forEach((f) => f.classList.remove("field-error"));
-    form.querySelectorAll(".error-msg").forEach((m) => (m.textContent = ""));
+    form.querySelectorAll(".field").forEach(f => f.classList.remove("field-error"));
+    form.querySelectorAll(".error-msg").forEach(m => m.textContent = "");
   }
 
-  // ---------------------------------------------------------
-  // Client-side validation mirroring the StudentData model
-  // ---------------------------------------------------------
   function validate(payload) {
     const errors = [];
 
@@ -119,20 +125,11 @@
       if (val === "" || val === null || Number.isNaN(val)) {
         errors.push([input, "This field is required."]);
       } else if (val < min || val > max) {
-        errors.push([
-          input,
-          `Must be between ${min} and ${max === Infinity ? "0+" : max}.`,
-        ]);
+        errors.push([input, `Must be between ${min} and ${max === Infinity ? "0+" : max}.`]);
       }
     });
 
-    [
-      "gender",
-      "country",
-      "academic_level",
-      "most_used_platform",
-      "purpose_of_use",
-    ].forEach((key) => {
+    ["gender", "country", "academic_level", "most_used_platform", "purpose_of_use"].forEach(key => {
       const input = document.getElementById(key);
       if (!payload[key] || String(payload[key]).trim() === "") {
         errors.push([input, "This field is required."]);
@@ -146,9 +143,6 @@
     return errors;
   }
 
-  // ---------------------------------------------------------
-  // Gather form data into the exact StudentData shape
-  // ---------------------------------------------------------
   function collectPayload() {
     const fd = new FormData(form);
     return {
@@ -158,41 +152,64 @@
       academic_level: fd.get("academic_level") || "",
       most_used_platform: fd.get("most_used_platform") || "",
       purpose_of_use: fd.get("purpose_of_use") || "",
-      avg_daily_usage_hours:
-        fd.get("avg_daily_usage_hours") === ""
-          ? NaN
-          : parseFloat(fd.get("avg_daily_usage_hours")),
-      daily_unlocks:
-        fd.get("daily_unlocks") === ""
-          ? NaN
-          : parseInt(fd.get("daily_unlocks"), 10),
-      study_hours:
-        fd.get("study_hours") === "" ? NaN : parseFloat(fd.get("study_hours")),
-      physical_activity_hours:
-        fd.get("physical_activity_hours") === ""
-          ? NaN
-          : parseFloat(fd.get("physical_activity_hours")),
-      sleep_hours_per_night:
-        fd.get("sleep_hours_per_night") === ""
-          ? NaN
-          : parseFloat(fd.get("sleep_hours_per_night")),
+      avg_daily_usage_hours: fd.get("avg_daily_usage_hours") === "" ? NaN : parseFloat(fd.get("avg_daily_usage_hours")),
+      daily_unlocks: fd.get("daily_unlocks") === "" ? NaN : parseInt(fd.get("daily_unlocks"), 10),
+      study_hours: fd.get("study_hours") === "" ? NaN : parseFloat(fd.get("study_hours")),
+      physical_activity_hours: fd.get("physical_activity_hours") === "" ? NaN : parseFloat(fd.get("physical_activity_hours")),
+      sleep_hours_per_night: fd.get("sleep_hours_per_night") === "" ? NaN : parseFloat(fd.get("sleep_hours_per_night")),
       stress_level: fd.get("stress_level") || "",
     };
   }
 
-  // ---------------------------------------------------------
-  // UI state switching
-  // ---------------------------------------------------------
-  function showState(name) {
-    [stateIdle, stateLoading, stateResult, stateError].forEach(
-      (el) => (el.hidden = true),
-    );
-    ({
-      idle: stateIdle,
-      loading: stateLoading,
-      result: stateResult,
-      error: stateError,
-    })[name].hidden = false;
+  function bandFor(score) {
+    if (score < 4) return {
+      label: "Signal: strained",
+      context: "Your responses suggest elevated strain right now. Small shifts in sleep or screen time can go a long way."
+    };
+    if (score < 7) return {
+      label: "Signal: balanced",
+      context: "Your rhythm looks fairly steady, with some room to recover and reset."
+    };
+    return {
+      label: "Signal: strong",
+      context: "Your habits point to a well-supported, resilient baseline. Keep it up."
+    };
+  }
+
+  function showErrorPage(label, copy) {
+    errorLabelEl.textContent = label;
+    errorCopyEl.textContent = copy;
+    goToPage(resultPage);
+    document.querySelector(".result-grid").classList.add("error-visible");
+    document.querySelector(".result-actions").style.display = "none";
+    document.querySelector(".result-disclaimer").style.display = "none";
+    document.querySelector(".hidden-state").hidden = false;
+  }
+
+  function hideErrorState() {
+    document.querySelector(".result-grid").classList.remove("error-visible");
+    document.querySelector(".result-actions").style.display = "";
+    document.querySelector(".result-disclaimer").style.display = "";
+    document.querySelector(".hidden-state").hidden = true;
+  }
+
+  function renderResult(score) {
+    hideErrorState();
+    const clamped = Math.max(0, Math.min(10, score));
+    const { label, context } = bandFor(clamped);
+
+    scoreNumberEl.textContent = Number(score).toFixed(2);
+    scoreBandEl.textContent = label;
+    scoreContextEl.textContent = context;
+
+    gaugeFill.style.transition = "none";
+    gaugeFill.style.strokeDashoffset = String(GAUGE_ARC_LENGTH);
+    requestAnimationFrame(() => {
+      gaugeFill.style.transition = "";
+      gaugeFill.style.strokeDashoffset = String(GAUGE_ARC_LENGTH * (1 - clamped / 10));
+    });
+
+    goToPage(resultPage);
   }
 
   function setSubmitting(isSubmitting) {
@@ -200,62 +217,11 @@
     submitBtn.classList.toggle("loading", isSubmitting);
   }
 
-  function bandFor(score) {
-    if (score < 4) {
-      return {
-        label: "Signal: strained",
-        context:
-          "Your responses suggest elevated strain right now. Small shifts in sleep or screen time can go a long way.",
-      };
-    }
-    if (score < 7) {
-      return {
-        label: "Signal: balanced",
-        context:
-          "Your rhythm looks fairly steady, with some room to recover and reset.",
-      };
-    }
-    return {
-      label: "Signal: strong",
-      context:
-        "Your habits point to a well-supported, resilient baseline. Keep it up.",
-    };
-  }
-
-  function renderResult(score) {
-    const clamped = Math.max(0, Math.min(10, score));
-    const { label, context } = bandFor(clamped);
-
-    scoreNumberEl.textContent = score.toFixed(2);
-    scoreBandEl.textContent = label;
-    scoreContextEl.textContent = context;
-
-    // reset then animate the arc fill on next frame
-    gaugeFill.style.transition = "none";
-    gaugeFill.style.strokeDashoffset = String(GAUGE_ARC_LENGTH);
-    requestAnimationFrame(() => {
-      gaugeFill.style.transition = "";
-      const offset = GAUGE_ARC_LENGTH * (1 - clamped / 10);
-      gaugeFill.style.strokeDashoffset = String(offset);
-    });
-
-    showState("result");
-  }
-
-  function renderError(label, copy) {
-    errorLabelEl.textContent = label;
-    errorCopyEl.textContent = copy;
-    showState("error");
-  }
-
-  // ---------------------------------------------------------
-  // Parse FastAPI / Pydantic 422 error responses into
-  // field-level messages where possible
-  // ---------------------------------------------------------
   function applyServerValidationErrors(detail) {
     if (!Array.isArray(detail)) return false;
     let matched = false;
-    detail.forEach((err) => {
+
+    detail.forEach(err => {
       const field = Array.isArray(err.loc) ? err.loc[err.loc.length - 1] : null;
       const input = field ? document.getElementById(field) : null;
       const target = field === "stress_level" ? stressHiddenInput : input;
@@ -264,29 +230,28 @@
         matched = true;
       }
     });
+
     return matched;
   }
 
-  // ---------------------------------------------------------
-  // Submit handler
-  // ---------------------------------------------------------
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     clearAllErrors();
+    hideErrorState();
 
     const payload = collectPayload();
     const clientErrors = validate(payload);
 
     if (clientErrors.length > 0) {
-      clientErrors.forEach(
-        ([input, msg]) => input && setFieldError(input, msg),
-      );
+      clientErrors.forEach(([input, msg]) => input && setFieldError(input, msg));
       clientErrors[0][0]?.focus?.();
       return;
     }
 
     setSubmitting(true);
-    showState("loading");
+
+    const originalText = submitBtn.querySelector(".btn-label").textContent;
+    submitBtn.querySelector(".btn-label").textContent = "Analyzing your signal";
 
     try {
       const res = await fetch(`${API_BASE}/predict`, {
@@ -298,11 +263,9 @@
       if (res.status === 422) {
         const body = await res.json().catch(() => null);
         const matched = body && applyServerValidationErrors(body.detail);
-        renderError(
-          "Check your inputs",
-          matched
-            ? "The API rejected a few fields — details are marked on the form."
-            : "The API rejected this submission. Please review your inputs and try again.",
+        showErrorPage(
+          "Check your answers",
+          matched ? "A few fields need attention. We've marked them on the assessment." : "The API rejected this submission. Please review your answers and try again."
         );
         return;
       }
@@ -311,41 +274,49 @@
         let detailMsg = `The API responded with status ${res.status}.`;
         const body = await res.json().catch(() => null);
         if (body && typeof body.detail === "string") detailMsg = body.detail;
-        renderError("Prediction failed", detailMsg);
+        showErrorPage("Prediction failed", detailMsg);
         return;
       }
 
       const data = await res.json();
+
       if (typeof data.predicted_mental_health_score !== "number") {
-        renderError(
-          "Unexpected response",
-          "The API responded, but the score was missing or malformed.",
-        );
+        showErrorPage("Unexpected response", "The API responded, but the score was missing or malformed.");
         return;
       }
 
       renderResult(data.predicted_mental_health_score);
     } catch (err) {
-      renderError(
+      showErrorPage(
         "Can't reach the server",
-        `Couldn't connect to ${API_BASE}. Make sure the backend is running (uvicorn main:app --port 2200 --reload) and reachable from this page.`,
+        `Couldn't connect to ${API_BASE}. Make sure the backend is running and reachable from this page.`
       );
     } finally {
       setSubmitting(false);
+      submitBtn.querySelector(".btn-label").textContent = originalText;
     }
   });
 
-  // live-clear errors as the user edits
-  form.querySelectorAll("input, select").forEach((el) => {
+  form.querySelectorAll("input, select").forEach(el => {
     el.addEventListener("input", () => clearFieldError(el));
     el.addEventListener("change", () => clearFieldError(el));
   });
 
   resetBtn.addEventListener("click", () => {
-    showState("idle");
+    form.reset();
+    stressHiddenInput.value = "";
+    segGroup.querySelectorAll(".stress-option").forEach(b => b.classList.remove("active"));
+    clearAllErrors();
+    hideErrorState();
+    progressFill.style.width = "8%";
+    progressNumber.textContent = "1";
+    goToPage(assessmentPage);
   });
 
   errorRetryBtn.addEventListener("click", () => {
-    showState("idle");
+    hideErrorState();
+    goToPage(assessmentPage);
   });
+
+  updateProgress();
 })();

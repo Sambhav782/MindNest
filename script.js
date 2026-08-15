@@ -41,6 +41,16 @@
   }
 
   function startAssessment() {
+    // Start every assessment with a clean form so a previous attempt
+    // is never carried into a new check-in.
+    form.reset();
+    stressHiddenInput.value = "";
+    segGroup.querySelectorAll(".stress-option").forEach((btn) => btn.classList.remove("active"));
+    clearAllErrors();
+    hideErrorState();
+    progressFill.style.width = "8%";
+    progressNumber.textContent = "1";
+
     goToPage(assessmentPage);
     updateProgress();
   }

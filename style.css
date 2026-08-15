@@ -1381,3 +1381,8 @@ a {
   color: #6848ef;
   font-weight: 700;
 }
+.field-label {
+  color: #5f5b70;
+  font-size: 11px;
+  font-weight: 700;
+}

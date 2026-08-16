@@ -1,427 +1,481 @@
-#MindNest AI
-
-MindNest AI is a student wellness prediction system that uses everyday lifestyle, academic, and digital-habit information to generate a model-based mental-health signal.
-
-Important: MindNest AI is an informational/educational project. It is not a medical or clinical diagnostic tool and should not be used as a replacement for professional mental-health care.
-
-Features
-
-AI-powered mental-health score prediction
-
-Student profile and academic inputs
-
-Digital-habit inputs such as screen time and daily phone unlocks
-
-Lifestyle inputs such as sleep, study time, and physical activity
-
-Perceived stress-level input
-
-Interactive result gauge with a plain-language interpretation
-
-Responsive landing page and assessment experience
-
-FastAPI backend for model inference
-
-Serialized ML pipeline stored as mentalHealthModel.pkl
-
-How It Works
-
-User
-  ↓
-MindNest Web Interface
-  ↓
-Assessment Form
-  ↓
-FastAPI /predict endpoint
-  ↓
-Saved ML Pipeline
-  ↓
-Predicted Mental Health Score
-  ↓
-Result shown in the UI
-
-The frontend collects the student's information and sends it to the backend as JSON. The backend loads the trained pipeline and uses it to generate a prediction.
-
-Dataset
-
-The project uses the Student Social Media And Mental Health Impact dataset.
-
-The dataset contains:
-
-5,000 rows
-
-13 columns
-
-The target variable is:
-
-Mental_Health_Score
-
-The model uses:
-
-Age
-Gender
-Country
-Academic_Level
-Most_Used_Platform
-Purpose_Of_Use
-Avg_Daily_Usage_Hours
-Daily_Unlocks
-Study_Hours
-Physical_Activity_Hours
-Sleep_Hours_Per_Night
-Stress_Level
-
-The observed target values in the dataset range from 3.6 to 9.4.
-
-Exploratory Data Analysis
-
-The notebook performs:
-
-Dataset shape inspection
-
-First-row inspection
-
-Missing-value checks
-
-Duplicate checks
-
-Data-type inspection
-
-Descriptive statistics
-
-Mental-health score distribution analysis
-
-Stress-level analysis
-
-Screen-time relationship analysis
-
-The purpose of EDA is to understand the dataset and relationships between student habits and the target before modeling.
-
-Data Preprocessing
-
-Different feature types use different preprocessing strategies.
-
-Numerical features
-
-These features are standardized with StandardScaler:
-
-Age
-Avg_Daily_Usage_Hours
-Daily_Unlocks
-Physical_Activity_Hours
-Sleep_Hours_Per_Night
-
-Study hours
-
-Study_Hours is treated as a skewed numerical feature:
-
-log1p transformation
-        ↓
-StandardScaler
-
-Stress level
-
-Stress_Level is ordinal:
-
-Low
-Medium
-High
-Very High
-
-It is encoded using OrdinalEncoder so the ordering is preserved.
-
-Nominal categorical features
-
-These are one-hot encoded:
-
-Gender
-Academic_Level
-Most_Used_Platform
-Purpose_Of_Use
-Grouped_Country
-
-handle_unknown="ignore" is used so an unseen category does not cause the encoder to fail during inference.
-
-All transformations are combined with the estimator using a ColumnTransformer and Pipeline.
-
-Model Selection
-
-The notebook compares:
-
-Linear Regression
-
-Random Forest Regressor
-
-Extra Trees Regressor
-
-The models are evaluated using R², MAE, and RMSE.
-
-Test-set comparison
-
-Model
-
-R²
-
-MAE
-
-RMSE
-
-Linear Regression
-
-~0.740
-
-~0.536
-
-~0.676
-
-Random Forest
-
-~0.878
-
-~0.347
-
-~0.464
-
-Extra Trees
-
-~0.914
-
-~0.273
-
-~0.389
-
-Extra Trees performed best on the held-out test set.
-
-Cross-validation
-
-Five-fold cross-validation is used as an additional generalization check. Instead of relying on one train/test split, the data is evaluated across five different folds.
-
-The purpose is to check whether the model's performance remains reasonably stable across different subsets of the dataset.
-
-Why Extra Trees?
-
-The final estimator is an ExtraTreesRegressor.
-
-Extra Trees is an ensemble of decision trees that introduces more randomness in how tree splits are selected. The predictions of the individual trees are aggregated to produce the final regression output.
-
-Extra Trees was selected because it performed best among the evaluated candidate models on this dataset.
-
-After model selection, the final pipeline is trained on the complete dataset.
-
-Model Output
-
-The model predicts:
-
-Mental_Health_Score
-
-The website presents the prediction as a 0–10 wellness signal.
-
-This number is a model prediction learned from the training dataset, not a clinical severity scale. The model was trained on observed target values ranging from 3.6 to 9.4.
-
-Project Structure
-
-StudentMentalHealth/
-│
-├── index.html
-├── style.css
-├── script.js
-│
-├── main.py
-├── mentalHealthModel.pkl
-│
-├── StudentMentalHealth.ipynb
-├── Student Social Media And Mental Health Impact.csv
-│
-└── README.md
-
-Main files
-
-File
-
-Purpose
-
-index.html
-
-Frontend structure and UI
-
-style.css
-
-UI styling and responsive design
-
-script.js
-
-Form validation, API requests, and result display
-
-main.py
-
-FastAPI backend
-
-mentalHealthModel.pkl
-
-Serialized trained ML pipeline
-
-StudentMentalHealth.ipynb
-
-Data analysis, preprocessing, model training, and evaluation
-
-Dataset CSV
-
-Training and evaluation data
-
-API
-
-The backend exposes:
-
+# 🧠 MindNest AI
+
+> **An AI-powered student wellness signal built from everyday habits.**
+
+MindNest AI is an end-to-end machine learning web application that uses everyday student lifestyle, academic, and digital-habit information to generate a simple **model-based wellness score**.
+
+The project combines **data analysis, machine learning, FastAPI, and frontend development** into a complete pipeline:
+
+**Data → Preprocessing → ML Model → API → Web Application**
+
+---
+
+## 🚀 Live Demo
+
+### **[Try MindNest AI](https://mindnest-1-ki4z.onrender.com/)**
+
+The deployed application provides a landing page, student assessment form, ML prediction, and an easy-to-understand wellness result.
+
+---
+
+## 📌 About the Project
+
+Student wellbeing can be influenced by everyday patterns such as:
+
+- 📱 Screen time and phone usage
+- 😴 Sleep duration
+- 🏃 Physical activity
+- 📚 Study hours
+- 😓 Perceived stress
+- 🎓 Academic information
+- 🌐 Digital habits and platform usage
+
+MindNest AI explores whether these patterns can be transformed into a useful machine-learning signal.
+
+The goal was not simply to train a model, but to understand and implement the **complete ML lifecycle**:
+
+> **Explore → Preprocess → Train → Compare → Validate → Deploy → Integrate**
+
+---
+
+## ✨ Features
+
+- 🏠 Interactive landing page
+- 📝 Student wellness assessment
+- 🤖 Machine-learning based prediction
+- 📊 Wellness score generated from user inputs
+- ⚡ FastAPI backend
+- 🌐 HTML, CSS & JavaScript frontend
+- 🔄 Real-time frontend-to-API communication
+- 🧩 Serialized preprocessing + model pipeline
+- 📱 Responsive and student-friendly interface
+- ☁️ Deployed web application
+
+---
+
+## 🏗️ System Architecture
+
+```text
+┌──────────────────────┐
+│      Web UI          │
+│ Landing + Assessment │
+└──────────┬───────────┘
+           │
+           ▼
+┌──────────────────────┐
+│    Frontend JS       │
+│ Validate + JSON      │
+└──────────┬───────────┘
+           │
+           │ POST /predict
+           ▼
+┌──────────────────────┐
+│       FastAPI        │
+│      Backend API     │
+└──────────┬───────────┘
+           │
+           ▼
+┌──────────────────────┐
+│   ML Pipeline        │
+│ Preprocessing +      │
+│    Extra Trees       │
+└──────────┬───────────┘
+           │
+           ▼
+┌──────────────────────┐
+│      Prediction      │
+│ Wellness Score +     │
+│   Interpretation     │
+└──────────────────────┘
+```
+
+The main prediction contract is:
+
+```text
 POST /predict
+        ↓
+predicted_mental_health_score
+```
 
-Request example
+The frontend collects the user's information, creates the request payload, and sends it to the FastAPI backend. The backend loads the serialized ML pipeline, performs the required preprocessing, generates the prediction, and returns the result.
 
-{
-  "age": 21,
-  "gender": "Male",
-  "country": "India",
-  "academic_level": "Undergraduate",
-  "most_used_platform": "Instagram",
-  "purpose_of_use": "Education",
-  "avg_daily_usage_hours": 4.0,
-  "daily_unlocks": 120,
-  "study_hours": 4.0,
-  "physical_activity_hours": 2.0,
-  "sleep_hours_per_night": 7.0,
-  "stress_level": "Medium"
-}
+---
 
-Response example
+## 🤖 Machine Learning
 
-{
-  "predicted_mental_health_score": 6.42
-}
+### Dataset
 
-Running Locally
+The project dataset contains:
 
-1. Clone the repository
+- **5,000 rows**
+- **13 columns**
+- Target range of approximately **3.6–9.4**
 
-git clone <your-repository-url>
-cd StudentMentalHealth
+Exploratory analysis was performed to understand the structure of the dataset, distributions, duplicates, missing values, and relationships between features and the target.
 
-2. Install dependencies
+Some of the relationships explored included:
 
-Use your project's dependency file if you have one. The core backend/model stack includes packages such as:
+```text
+More screen time       → lower score tendency
+More phone unlocks     → lower score tendency
+More sleep             → higher score tendency
+More physical activity → higher score tendency
+More study hours       → higher score tendency
+Higher stress          → lower score tendency
+```
 
-pip install fastapi uvicorn pandas numpy scikit-learn joblib
+These are **patterns observed in the dataset**, not universal medical conclusions.
 
-3. Start the FastAPI backend
+---
 
-uvicorn main:app --reload
+## ⚙️ Data Preprocessing
 
-4. Serve the frontend
+Different types of features require different transformations.
 
-Because this project uses plain HTML/CSS/JavaScript, serve the frontend through HTTP instead of opening index.html directly with file://.
+### Numerical Features
 
-For example:
+Features such as:
 
-python -m http.server 8000
+- Age
+- Screen time
+- Phone usage
+- Unlocks
+- Physical activity
+- Sleep
 
-Then open:
+are standardized using `StandardScaler`.
 
-http://localhost:8000
+### Study Hours
 
-Deployment
+`Study_Hours` is transformed using:
 
-The frontend and FastAPI backend can be deployed using services such as Render.
+```text
+log1p → StandardScaler
+```
 
-For deployment, make sure:
+This helps handle its skewed distribution.
 
-main.py is present in the backend service
+### Stress Level
 
-mentalHealthModel.pkl is present alongside the backend
+Stress is treated as an ordinal feature:
 
-script.js points to the correct backend URL
+```text
+Low        → 0
+Moderate   → 1
+High       → 2
+Very High  → 3
+```
 
-The frontend can reach the /predict endpoint
+### Categorical Features
 
-Retraining the Model
+Categorical variables such as gender, country, platform, purpose, and academic level are transformed using:
 
-The notebook documents the complete ML workflow:
+```text
+OneHotEncoder
+```
 
-Load dataset
-    ↓
-Inspect and explore data
-    ↓
-Define features and target
-    ↓
-Train/test split
-    ↓
-Build preprocessing pipeline
-    ↓
-Train candidate models
-    ↓
-Evaluate models
-    ↓
-Cross-validation
-    ↓
-Select Extra Trees
-    ↓
-Train final model on full dataset
-    ↓
-Save mentalHealthModel.pkl
+The preprocessing is packaged together with the estimator using a `ColumnTransformer` and `Pipeline`, ensuring that the same transformations are applied during both training and live prediction.
 
-The final trained pipeline is serialized with Joblib:
+---
 
-joblib.dump(finalModel, "mentalHealthModel.pkl")
+## 📈 Model Comparison
 
-When retraining, validate the new model before replacing the deployed .pkl.
+Three regression models were evaluated on the same held-out test set:
 
-Limitations
+| Model | R² |
+|---|---:|
+| Linear Regression | 0.740 |
+| Random Forest | 0.878 |
+| **Extra Trees** | **0.914** |
 
-Dataset limitations
+### 🏆 Selected Model: Extra Trees
 
-The quality of predictions depends on the quality and representativeness of the training dataset.
+The Extra Trees model achieved:
 
-Model limitations
+- **R²:** 0.914
+- **MAE:** 0.273
+- **RMSE:** 0.389
 
-The model learns statistical patterns from the dataset. It does not clinically assess a student's mental state.
+It performed best among the tested models on the evaluation set.
 
-Out-of-distribution inputs
+Extra Trees was selected because it can capture nonlinear relationships in tabular data while combining multiple decision trees to produce a stable prediction.
 
-Predictions may be less reliable for combinations of values that are very different from the training data.
+---
 
-Not a medical diagnosis
+## 🔬 Validation
 
-The result must not be interpreted as a diagnosis, screening result, or medical recommendation.
+After comparing the models, the selected model was additionally checked using **5-fold cross-validation**.
 
-Privacy
+Each fold uses approximately:
 
-This is an educational project. Users should avoid entering unnecessary personally identifiable or sensitive information.
+```text
+80% → Training
+20% → Validation
+```
 
-A real-world mental-health system would require stronger privacy, security, consent, and data-governance controls.
+The purpose was to check whether the model's performance remained reasonably consistent across different splits rather than relying on a single lucky train/test split.
 
-Project Goal
+---
 
-MindNest AI demonstrates an end-to-end machine-learning application:
+## 🧪 End-to-End ML Pipeline
 
-Data Analysis
+The project follows this workflow:
+
+```text
+Student Dataset
       ↓
-Feature Engineering
+Exploratory Data Analysis
       ↓
-Preprocessing
+Data Preprocessing
       ↓
 Model Comparison
       ↓
-Model Evaluation
+Extra Trees Selection
       ↓
-Model Deployment
+Cross-Validation
       ↓
-Web Application
+Final Pipeline
+      ↓
+mentalHealthModel.pkl
+      ↓
+FastAPI
+      ↓
+/predict
+      ↓
+Frontend
+      ↓
+Wellness Signal
+```
 
-The project combines data science, machine learning, FastAPI, and frontend development into a single student-focused application.
+The trained pipeline is serialized as:
 
-Creator
+```text
+mentalHealthModel.pkl
+```
 
-Created by Sambhav Shahi
+and loaded by the FastAPI backend for live inference.
 
-Disclaimer
+---
 
-MindNest AI is an educational/informational project.
+## 🛠️ Tech Stack
 
-It is not intended to diagnose, treat, prevent, or replace professional assessment of any mental-health condition.
+### Machine Learning
+
+- Python
+- Pandas
+- NumPy
+- Scikit-learn
+- Joblib
+- Jupyter Notebook
+
+### Backend
+
+- FastAPI
+- Pydantic
+- Uvicorn
+
+### Frontend
+
+- HTML
+- CSS
+- JavaScript
+
+### Deployment
+
+- Render
+
+---
+
+## 📂 Project Structure
+
+A simplified representation of the project architecture:
+
+```text
+MindNest/
+│
+├── frontend/
+│   ├── index.html
+│   ├── style.css
+│   └── script.js
+│
+├── main.py
+├── mentalHealthModel.pkl
+├── StudentMentalHealth.ipynb
+├── requirements.txt
+└── README.md
+```
+
+> File names may vary slightly depending on the current version of the repository.
+
+---
+
+## 🔌 API
+
+### `POST /predict`
+
+The frontend sends student information to the FastAPI backend.
+
+Conceptually:
+
+```json
+{
+  "age": 20,
+  "gender": "Male",
+  "country": "India",
+  "screen_time": 5.5,
+  "sleep": 7,
+  "study_hours": 4,
+  "stress_level": "Moderate"
+}
+```
+
+The API processes the input through the saved ML pipeline and returns a predicted wellness score.
+
+```text
+POST /predict
+        ↓
+Model prediction
+        ↓
+predicted_mental_health_score
+```
+
+---
+
+## 🎨 Product Experience
+
+MindNest follows a simple three-stage experience:
+
+### 1. Landing
+
+Introduces MindNest and explains the purpose of the assessment.
+
+### 2. Assessment
+
+The user provides information about their everyday habits and lifestyle.
+
+### 3. Result
+
+The model generates a wellness signal and presents it with contextual interpretation.
+
+The interface intentionally uses **non-clinical language** and focuses on providing an informational signal rather than presenting itself as a medical diagnostic system.
+
+---
+
+## ⚠️ Important Disclaimer
+
+**MindNest AI is an educational and experimental machine-learning project. It is NOT a medical device, clinical assessment, or diagnostic tool.**
+
+The generated score should **not** be interpreted as a diagnosis or professional mental-health assessment.
+
+The model's predictions are limited by the dataset used for training, and unusual combinations of inputs may produce less reliable results. A strong machine-learning evaluation score does not establish clinical validity.
+
+If someone is concerned about their mental health, they should seek advice from a qualified healthcare professional.
+
+---
+
+## 🚧 Limitations
+
+Current limitations include:
+
+- Training data limits what the model can learn.
+- Predictions may be less reliable for inputs that differ significantly from the training data.
+- Dataset representativeness can affect generalization.
+- Model performance metrics do not establish clinical validity.
+- Individual predictions currently have limited explainability.
+
+---
+
+## 🔮 Future Improvements
+
+Potential improvements include:
+
+- 📚 Expand and improve the training dataset
+- 🧪 Stronger data validation
+- 📊 Better model calibration
+- 🔍 Individual prediction explainability
+- 📈 Model monitoring after deployment
+- ♿ Improved accessibility
+- 🧪 Automated testing
+- 🌎 More representative training data
+
+These improvements would help make the system more robust and easier to evaluate in future iterations.
+
+---
+
+## 🎯 What I Learned
+
+This project was built as an opportunity to understand how an ML model moves beyond a notebook and becomes an actual application.
+
+Through MindNest AI, I worked across:
+
+- Data exploration
+- Feature preprocessing
+- Regression
+- Model comparison
+- Cross-validation
+- Model serialization
+- FastAPI
+- API integration
+- Frontend development
+- Deployment
+
+The main learning objective was understanding the complete journey:
+
+> **Data → Model → API → Product**
+
+---
+
+## 👨‍💻 Author
+
+### Sambhav Shahi
+
+Student & Aspiring AI/ML Developer
+
+Interested in:
+
+- Python
+- Machine Learning
+- Data Science
+- Artificial Intelligence
+- Web Development
+
+MindNest AI was created as a practical project to learn and demonstrate the complete machine-learning development lifecycle.
+
+---
+
+## 🌐 Links
+
+**Live Application:**  
+https://mindnest-1-ki4z.onrender.com/
+
+---
+
+## ⭐ Project Status
+
+**Status:** 🟢 Working End-to-End Web Application
+
+**Current Pipeline:**
+
+```text
+Dataset
+   ↓
+EDA
+   ↓
+Preprocessing
+   ↓
+Extra Trees
+   ↓
+Serialized Model
+   ↓
+FastAPI
+   ↓
+Frontend
+   ↓
+Render Deployment
+```
+
+---
+
+### Built with ❤️ using Python, Machine Learning, FastAPI, HTML, CSS & JavaScript.
+
+**MindNest AI — From notebook → model → API → product.**
